@@ -11,7 +11,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.decorators import api_view , permission_classes , authentication_classes 
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
-
+from django.db.models import Count , Q 
 from .serializers import * 
 
 # Create your views here.
@@ -86,3 +86,10 @@ class ResetPasswordView( APIView ) :
         serilizaer.is_valid( raise_exception = True ) 
         serilizaer.save() 
         return Response({"message" : "تم تغيير كلمة المرور بنجاح"} , status = status.HTTP_200_OK )  
+    
+class ProfileView( generics.RetrieveUpdateAPIView ) :
+    serializer_class = ProfileSerializer
+
+    def get_object( self ) :
+        return User.objects.annotate( borrowed_books_count = Count( "borrower_book" , filter = Q( borrower_book__is_returned = False ) 
+        )).get( id = self.request.user.id) 

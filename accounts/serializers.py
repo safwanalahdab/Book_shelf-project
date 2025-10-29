@@ -52,4 +52,10 @@ class ResetPasswordSerilaizer( serializers.Serializer ) :
         user.save()
         return user 
         
-        
+class ProfileSerializer( serializers.ModelSerializer ) : 
+    borrowed_books_count =  serializers.IntegerField( read_only = True )
+    class Meta : 
+        model = User 
+        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ] 
+
+         
