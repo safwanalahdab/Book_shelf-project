@@ -1,1 +1,1 @@
-web: gunicorn Bookshelf.wsgi:applicationgit add Procfile
+web: gunicorn Bookshelf.wsgi:applicationgit
