@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.models import User 
 from django.contrib.auth import login 
-from rest_framework import generics , status 
+from rest_framework import generics , status ,viewsets
 from rest_framework.response import Response 
 from rest_framework.authtoken.models import Token 
 from rest_framework.views import APIView 
@@ -13,6 +13,10 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
 from django.db.models import Count , Q 
 from .serializers import * 
+from books.models import BorrowedBook 
+from books.serializers import BarrowBookSerilaizers
+from rest_framework.decorators import action 
+
 
 # Create your views here.
  
@@ -93,3 +97,22 @@ class ProfileView( generics.RetrieveUpdateAPIView ) :
     def get_object( self ) :
         return User.objects.annotate( borrowed_books_count = Count( "borrower_book" , filter = Q( borrower_book__is_returned = False ) 
         )).get( id = self.request.user.id) 
+    
+class BorrwoedProfileView( viewsets.ModelViewSet ) :
+    queryset = BorrowedBook.objects.all() 
+    serializer_class = BarrowBookSerilaizers 
+    
+    def get_queryset( self ) :
+        user = self.request.user 
+        querset = BorrowedBook.objects.filter( borrower = user , is_returned = False )
+        return querset 
+    
+    @action( detail = True , methods = ['post'] ) 
+    def return_book( self , request , pk = None ) : 
+        book = self.get_object() 
+        if book.return_request == True : 
+            return Response({"Message" : "لقد قمت بتقديم طلب استعادة بالفعل سابقا"},status = status.HTTP_400_BAD_REQUEST)
+        book.return_request = True 
+        book.save() 
+        return Response({"Message" : "لقد قمت بتقديم طلب استعادة بنجاح"} , status = status.HTTP_200_OK ) 
+    

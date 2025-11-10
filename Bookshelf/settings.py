@@ -44,6 +44,7 @@ INSTALLED_APPS = [
      'books' ,
      'accounts' ,
      'Home', 
+     'dashboard',
 ]
 
 REST_FRAMEWORK = {

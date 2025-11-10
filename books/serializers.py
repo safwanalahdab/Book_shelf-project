@@ -28,7 +28,8 @@ class BookSerializers ( serializers.ModelSerializer ) :
 
     class Meta : 
         model = Book 
-        fields = ['id','title','author','image','category','description','possition','total_copies','is_avaiable']  
+        fields = ['id','title','author','image','category','description','possition','total_copies','is_avaiable','is_archived']  
+        read_only_fields = ["id"] 
 
 class BarrowBookSerilaizers ( serializers.ModelSerializer ) : 
      book = BookSerializers( read_only = True ) 
@@ -36,7 +37,7 @@ class BarrowBookSerilaizers ( serializers.ModelSerializer ) :
 
      class Meta : 
          model = BorrowedBook 
-         fieldes = ['id','book','borrower','borrow_date','return_date','is_returned','notes']
+         fields = ['id','book','borrower','borrow_date','return_request','return_date','is_returned','notes']
 
 
 

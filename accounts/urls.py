@@ -1,7 +1,10 @@
-from django.urls import path 
+from django.urls import path , include
 from . import views 
 from .views import * 
+from rest_framework.routers import DefaultRouter 
 
+router = DefaultRouter() 
+router.register('profileborrwoed', BorrwoedProfileView , basename = 'BorrwoedProfileView' )
 
 urlpatterns = [
       path('', views.account, name='account') , 
@@ -10,7 +13,7 @@ urlpatterns = [
       path('logout' , LogoutView.as_view() , name = "logout" ) ,
       path('change_password' , ResetPasswordView.as_view() , name = "change_password" ) ,
       path('profile' , ProfileView.as_view() , name = "profile" ) ,
-
+      path('', include( router.urls ) ) ,
 ]
 
 

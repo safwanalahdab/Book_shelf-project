@@ -22,7 +22,7 @@ class BookViewSet( viewsets.ReadOnlyModelViewSet ) :
     serializer_class = BookSerializers
     permission_classes = [ AllowAny ]     
     def get_queryset( self ) :
-      queryset = Book.objects.all()
+      queryset = Book.objects.filter( is_archived = False ) 
       author = self.request.query_params.get('author') 
       category = self.request.query_params.get('category') 
 

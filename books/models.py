@@ -26,6 +26,7 @@ class Book ( models.Model ) :
     created_at = models.DateTimeField( auto_now_add = True )
     is_avaiable = models.BooleanField( default = True ) 
     possition = models.CharField( max_length = 10 , null = True ) 
+    is_archived = models.BooleanField( default = False ) 
     
     """
     this function to boorow 
@@ -57,6 +58,7 @@ class BorrowedBook ( models.Model ) :
      return_date = models.DateField( blank = True , null = True )
      is_returned = models.BooleanField( default = False ) 
      notes = models.TextField( blank = True , null = True , default = "" )  
+     return_request = models.BooleanField( default = False ) 
 
      def __str__( self ) : 
          return self.book.title 
