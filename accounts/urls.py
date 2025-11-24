@@ -5,6 +5,8 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter() 
 router.register('profileborrwoed', BorrwoedProfileView , basename = 'BorrwoedProfileView' )
+router.register('Recoveredbooks', RecoveredbooksProfileView , basename = 'RecoveredbooksProfileView' )
+
 
 urlpatterns = [
       path('', views.account, name='account') , 

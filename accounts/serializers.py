@@ -41,7 +41,7 @@ class ResetPasswordSerilaizer( serializers.Serializer ) :
     def validate( self , attrs ) : 
         user = self.context['request'].user 
         if not user.check_password( attrs['old_password'] ) : 
-            raise serializers.ValidationError( { "error" : "كلمة المرور القجيمة خاطئة"} )   
+            raise serializers.ValidationError( { "error" : "كلمة المرور القديمة خاطئة"} )   
         if attrs['new_password'] != attrs['confirm_password'] : 
             raise serializers.ValidationError({"error" : "كلمة المرور غير متطابقة"}) 
         return attrs 
@@ -56,6 +56,6 @@ class ProfileSerializer( serializers.ModelSerializer ) :
     borrowed_books_count =  serializers.IntegerField( read_only = True )
     class Meta : 
         model = User 
-        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ] 
-
+        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ,"date_joined" ] 
+        read_only_fields = ['date_joined'] 
          

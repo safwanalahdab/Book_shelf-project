@@ -13,6 +13,6 @@ router.register(r'author', AuthorAdminView , basename='AuthorAdminView-users')
 
 
 urlpatterns = [
-    path('api/', include(router.urls) ) ,
+    path('', include(router.urls) ) ,
     path('stats/' , DashboardStatsView.as_view() , name = "DashboardStatsView" ) ,
 ]

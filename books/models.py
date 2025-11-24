@@ -27,6 +27,9 @@ class Book ( models.Model ) :
     is_avaiable = models.BooleanField( default = True ) 
     possition = models.CharField( max_length = 10 , null = True ) 
     is_archived = models.BooleanField( default = False ) 
+    pages = models.IntegerField( default = 0 )
+    publication_year = models.IntegerField( null = True  ) 
+    isbn = models.CharField( null = True , max_length = 15 ) 
     
     """
     this function to boorow 
@@ -45,7 +48,7 @@ class Book ( models.Model ) :
 
     def return_copy( self ) :
         self.total_copies += 1 
-        self.total_copies = True 
+        self.is_avaiable = True 
         self.save( update_fields = [ 'total_copies' , 'total_copies' ] ) 
 
     def __str__( self ) : 
@@ -59,7 +62,7 @@ class BorrowedBook ( models.Model ) :
      is_returned = models.BooleanField( default = False ) 
      notes = models.TextField( blank = True , null = True , default = "" )  
      return_request = models.BooleanField( default = False ) 
-
+     
      def __str__( self ) : 
          return self.book.title 
      

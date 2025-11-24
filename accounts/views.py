@@ -116,3 +116,10 @@ class BorrwoedProfileView( viewsets.ModelViewSet ) :
         book.save() 
         return Response({"Message" : "لقد قمت بتقديم طلب استعادة بنجاح"} , status = status.HTTP_200_OK ) 
     
+class RecoveredbooksProfileView( viewsets.ModelViewSet ) : 
+    queryset = BorrowedBook.objects.all() 
+    serializer_class = BarrowBookSerilaizers 
+    def get_queryset( self ) :
+        user = self.request.user 
+        queryset = BorrowedBook.objects.filter(borrower = user , is_returned = True ) 
+        return queryset 
