@@ -395,10 +395,14 @@ RAW_ALLOWED_HOSTS = os.environ.get(
     "localhost,127.0.0.1,.ngrok-free.dev,.ngrok.io",
 )
 ALLOWED_HOSTS = [
-    host.strip()
-    for host in RAW_ALLOWED_HOSTS.split(",")
-    if host.strip()
+    "localhost",
+    "127.0.0.1",
+    ".ngrok-free.dev",
+    ".ngrok.io",
+    ".railway.app",
+    "web-production-7dcd.up.railway.app/",  # الدومين الكامل تبع خدمتك
 ]
+
 
 # -----------------------------
 # Applications
