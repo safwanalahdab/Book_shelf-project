@@ -39,6 +39,9 @@ class BookViewSet( viewsets.ReadOnlyModelViewSet ) :
          book = self.get_object() 
          user = request.user 
 
+         if BorrowedBook.objects.filter( borrower = user , is_returned = False , book = book ).count() > 0 :
+            return Response( { "error" : "انت مستعير هذه النسخة حاليا" } , status = status.HTTP_400_BAD_REQUEST )
+
          if not book.borrow_book() :
             return Response({"error" : "الكتاب غير متاح حاليا"} , status = status.HTTP_400_BAD_REQUEST )
          

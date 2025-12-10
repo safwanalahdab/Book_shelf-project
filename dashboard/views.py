@@ -21,7 +21,7 @@ class BookAdminView( viewsets.ModelViewSet ) :
 
     def get_queryset ( self ) :
         #queryset = Book.objects.filter( is_archived = False )
-        queryset = Book.objects.all()
+        queryset = Book.objects.all().order_by("is_archived","-count_borrowed")
         author = self.request.query_params.get('author') 
         category = self.request.query_params.get('category') 
 
@@ -36,6 +36,7 @@ class BookAdminView( viewsets.ModelViewSet ) :
     def destroy( self , request , *args , **kwargs ) : 
         book = self.get_object() 
         book.is_archived = True 
+        book.is_avaiable = False 
         book.save() 
         return Response( { "Message" : "تمت الأرشفة بنجاح" } , status = status.HTTP_200_OK )
     
@@ -67,7 +68,7 @@ class BorrowedBookAdminViewSet( viewsets.ModelViewSet ) :
     queryset = BorrowedBook.objects.all() 
 
     def get_queryset( self ) :
-        queryset = BorrowedBook.objects.filter( is_returned = False ) 
+        queryset = BorrowedBook.objects.filter( is_returned = False )
         return queryset 
     
     @action( detail = True , methods = ['post'] , permission_classes = [IsAdminUser] ) 
@@ -77,16 +78,17 @@ class BorrowedBookAdminViewSet( viewsets.ModelViewSet ) :
             return Response({"Erroe" : "المستخدم لم يقدم طلب استرجاع"} , status = status.HTTP_400_BAD_REQUEST )
         borrow.book.return_copy() 
         borrow.is_returned = True 
+        borrow.return_date = borrow.return_request_date 
         borrow.save() 
         return Response({"MESSAGE" : "تمت استعادة الكتاب بنجاح"} , status = status.HTTP_200_OK )
-    
+    """
     @action( detail = True , methods = ['post'] , permission_classes = [IsAdminUser] ) 
     def reject_return( self , request , pk = None ) : 
         borrow = self.get_object() 
         if not borrow.return_request : 
             return Response({"Erroe" : "المستخدم لم يقدم طلب استرجاع"} , status = status.HTTP_400_BAD_REQUEST )
         return Response( {"MESSAGE" : "تم رفض طلب الاستعادة"} , status = status.HTTP_200_OK )
-
+    """
 class DashboardStatsView ( APIView ) :
     permission_classes = [IsAdminUser] 
 
@@ -96,13 +98,16 @@ class DashboardStatsView ( APIView ) :
         borrowed_books = BorrowedBook.objects.filter( is_returned = False ).count()
         pending_returns = BorrowedBook.objects.filter( is_returned = False , return_request = True ).count()
         archived_books = Book.objects.filter( is_archived = True ).count() 
+        available_books = Book.objects.filter( is_avaiable = True ).count() 
 
         data = {
-            "total_users" : total_users , 
+             "total_users" : total_users , 
              "total_books" : total_books , 
              "borrowed_books" : borrowed_books , 
+             "available_books" : available_books , 
              "pending_returns" : pending_returns , 
              "archived_books" : archived_books ,
+            
         }
         return Response( data , status = status.HTTP_200_OK ) 
     
@@ -114,5 +119,5 @@ class CategoryAdminView( viewsets.ModelViewSet ) :
 class AuthorAdminView( viewsets.ModelViewSet ) : 
     queryset = Author.objects.all() 
     serializer_class = AuthorSerializers 
-    permission_classes = [IsAdminUser] 
-    
+    permission_classes = [ IsAdminUser ] 
+       

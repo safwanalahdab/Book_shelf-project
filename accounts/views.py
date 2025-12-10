@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token 
 from rest_framework.views import APIView 
 from rest_framework.permissions import AllowAny 
+from django.utils import timezone
 from rest_framework.authtoken.views import obtain_auth_token 
 from rest_framework.decorators import api_view , permission_classes , authentication_classes 
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -95,9 +96,10 @@ class ProfileView( generics.RetrieveUpdateAPIView ) :
     serializer_class = ProfileSerializer
 
     def get_object( self ) :
-        return User.objects.annotate( borrowed_books_count = Count( "borrower_book" , filter = Q( borrower_book__is_returned = False ) 
-        )).get( id = self.request.user.id) 
-    
+        return (User.objects.annotate( borrowed_books_count = Count( "borrower_book" , filter = Q( borrower_book__is_returned = False )) 
+        ).get( id = self.request.user.id))
+    # ),overdue_books_count = Count( "borrower_book" , filter = Q( borrower_book__is_returned = False , borrower_book__late_day__gt = 0 ) ) 
+
 class BorrwoedProfileView( viewsets.ModelViewSet ) :
     queryset = BorrowedBook.objects.all() 
     serializer_class = BarrowBookSerilaizers 
@@ -112,7 +114,8 @@ class BorrwoedProfileView( viewsets.ModelViewSet ) :
         book = self.get_object() 
         if book.return_request == True : 
             return Response({"Message" : "لقد قمت بتقديم طلب استعادة بالفعل سابقا"},status = status.HTTP_400_BAD_REQUEST)
-        book.return_request = True 
+        book.return_request = True
+        book.return_request_date = timezone.now() 
         book.save() 
         return Response({"Message" : "لقد قمت بتقديم طلب استعادة بنجاح"} , status = status.HTTP_200_OK ) 
     

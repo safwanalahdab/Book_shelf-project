@@ -12,7 +12,12 @@ class RegisterSerializer( serializers.ModelSerializer ) :
 
     class Meta : 
         model = User 
-        fields = ['username' , 'password' , 'password2' , 'email' , 'first_name' , 'last_name' ] 
+        fields = ['username' , 'password' , 'password2' , 'email' , 'first_name' , 'last_name' ]
+        extra_kwargs = {
+            'username' : {'required' : True } , 
+            'first_name' : { 'required' : True } , 
+            'last_name' : { 'required' : True } ,
+        } 
 
     def validate( self , attrs ) :
         if attrs['password'] != attrs['password2'] : 
@@ -54,8 +59,9 @@ class ResetPasswordSerilaizer( serializers.Serializer ) :
         
 class ProfileSerializer( serializers.ModelSerializer ) : 
     borrowed_books_count =  serializers.IntegerField( read_only = True )
+    overdue_books_count = serializers.IntegerField( read_only = True )
     class Meta : 
         model = User 
-        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ,"date_joined" ] 
+        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ,"overdue_books_count","date_joined" ] 
         read_only_fields = ['date_joined'] 
          

@@ -9,7 +9,7 @@ class UserAdminSeri( serializers.ModelSerializer ) :
     borrowed_books_count = serializers.IntegerField(read_only=True)
     class Meta : 
         model = User 
-        fields = ['id','username','email','first_name','last_name','borrowed_books_count']
+        fields = ['id','username','email','first_name','last_name','borrowed_books_count','date_joined']
         read_only_fields = ['borrowed_books_count']
         
 
