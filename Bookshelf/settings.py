@@ -396,8 +396,8 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     ".ngrok-free.dev",
     ".ngrok.io",
-    ".railway.app",
-    "web-production-7dcd.up.railway.app",  # الدومين الكامل تبع خدمتك
+    ".onrender.com",
+    #"web-production-7dcd.up.railway.app",  # الدومين الكامل تبع خدمتك
 ]
 
 
@@ -535,7 +535,8 @@ USE_TZ = True
 # -----------------------------
 # Static / Media
 # -----------------------------
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # مهم لريندر
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
