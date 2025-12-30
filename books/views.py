@@ -1,26 +1,21 @@
-from django.shortcuts import render 
-from django.http import HttpResponse 
-from rest_framework import viewsets , status 
-from rest_framework.decorators import action 
-from rest_framework.permissions import IsAuthenticated 
-from rest_framework.response import responses , Response
-from .models import Book , BorrowedBook 
-from .serializers import * 
-from rest_framework.decorators import api_view , permission_classes 
-from rest_framework.permissions import AllowAny 
+from django.http import HttpResponse
+from django.shortcuts import render
 
-# Create your views here.
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
-
-def book_page( request ) :
-    return HttpResponse("hadialabrash1111") 
-
+from .models import *
+from .serializers import *
+ 
 
 class BookViewSet( viewsets.ReadOnlyModelViewSet ) :
     
     queryset = Book.objects.all()
     serializer_class = BookSerializers
-    permission_classes = [ AllowAny ]     
+    permission_classes = [ AllowAny ]
+         
     def get_queryset( self ) :
       queryset = Book.objects.filter( is_archived = False ) 
       author = self.request.query_params.get('author') 
@@ -47,7 +42,80 @@ class BookViewSet( viewsets.ReadOnlyModelViewSet ) :
          
          BorrowedBook.objects.create( book = book , borrower = user ) 
          return Response({"success" : "تمت الاستعارة بنجاح"} , status = status.HTTP_201_CREATED ) 
-         
+      
+    @action( detail = True , methods = ['post'] , permission_classes = [IsAuthenticated] ) 
+    def like( self , request , pk = None ) : 
+       book = self.get_object() 
+       user = request.user 
+       fav , created = Favorite_Book.objects.get_or_create( user = user , book = book )
 
-          
-        
+       if not created :
+          return Response({"message" : "الكتاب موجود بالفعل ضمن المفضلة"} , status = status.HTTP_400_BAD_REQUEST )
+
+       return Response({"Message" : "تمت اضافة الكتاب الى المفضلة"} , status = status.HTTP_200_OK ) 
+
+
+    @action( detail = True , methods = ['post'] , permission_classes = [IsAuthenticated] ) 
+    def unlike( self , request , pk = None ) : 
+       book = self.get_object() 
+       user = request.user 
+       created = Favorite_Book.objects.filter( user = user , book = book ).first() 
+
+       if not created  :
+          return Response({ "MESSAGE" : "انت لست معجب بالكتاب اصلا"} , status = status.HTTP_400_BAD_REQUEST )
+
+       created.delete() 
+       return Response({"MESSAGE" : "لقد قمت بالغاء الاعجاب على هذا الكتاب" } , status = status.HTTP_200_OK )    
+
+"""        
+### BookViewSet
+
+Public read-only API for browsing books.
+
+- **List books**
+  - `GET /api/books/`
+  - Returns all non-archived books.
+  - Optional query params:
+    - `author`: substring match on author name
+    - `category`: substring match on category name
+
+- **Retrieve a book**
+  - `GET /api/books/{id}/`
+
+- **Borrow a book**
+  - `POST /api/books/{id}/borrow/`
+  - Auth required.
+  - Fails if:
+    - user already has an active borrow for this book, or
+    - no available copies remain.
+
+- **Add to favorites**
+  - `POST /api/books/{id}/like/`
+  - Auth required.
+  - Fails if the book is already in the user's favorites.
+
+- **Remove from favorites**
+  - `POST /api/books/{id}/unlike/`
+  - Auth required.
+  - Fails if the book is not in the user's favorites.
+
+"""
+
+
+class CategoryViewSet ( viewsets.ReadOnlyModelViewSet ) : 
+   queryset = Category.objects.all() 
+   serializer_class = CategorySerializers
+   parser_classes = [ AllowAny ] 
+
+"""
+    ### CategoryViewSet
+    Public read-only API for listing and retrieving book categories.
+
+    Endpoints (assuming router prefix 'category'):
+      GET /api/category/        -> list all categories
+      GET /api/category/{id}/   -> retrieve a single category
+
+    Permissions:
+      - All endpoints are public (no authentication required).
+
+"""      

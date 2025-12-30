@@ -1,8 +1,38 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User 
+from books.serializers import BookSerializers 
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework.authtoken.models import Token
 from rest_framework.validators import UniqueValidator 
 from django.contrib.auth.password_validation import validate_password 
+from books.models import Favorite_Book  
 
+
+User = get_user_model()
+
+class LoginSerializer(serializers.Serializer):
+    identifier = serializers.CharField()  # username OR email
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        identifier = attrs.get("identifier", "").strip()
+        password = attrs.get("password")
+
+        user = None
+        if "@" in identifier:
+            user = User.objects.filter(email__iexact=identifier).first()
+        else:
+            user = User.objects.filter(username__iexact=identifier).first()
+
+        if not user:
+            raise serializers.ValidationError({"error": "اسم المستخدم/الإيميل غير موجود"})
+
+        auth_user = authenticate(username=user.username, password=password)
+        if not auth_user:
+            raise serializers.ValidationError({"error": "اسم المستخدم أو كلمة المرور غير صحيحة"})
+
+        attrs["user"] = auth_user
+        return attrs
 
 class RegisterSerializer( serializers.ModelSerializer ) : 
     
@@ -14,17 +44,27 @@ class RegisterSerializer( serializers.ModelSerializer ) :
         model = User 
         fields = ['username' , 'password' , 'password2' , 'email' , 'first_name' , 'last_name' ]
         extra_kwargs = {
-            'username' : {'required' : True } , 
-            'first_name' : { 'required' : True } , 
-            'last_name' : { 'required' : True } ,
+            'username' : {'required' : True ,
+                          'allow_blank': False, } , 
+            'first_name' : { 'required' : True , 
+                            'allow_blank': False, } , 
+            'last_name' : { 'required' : True , 
+                           'allow_blank': False, } ,
         } 
 
     def validate( self , attrs ) :
+        if "username" in attrs and attrs["username"]:
+         attrs["username"] = attrs["username"].strip().lower()
+
+        if "email" in attrs and attrs["email"]:
+            attrs["email"] = attrs["email"].strip().lower()
+
         if attrs['password'] != attrs['password2'] : 
             raise serializers.ValidationError( {"password" : "كلمة السر غير متطابقة"} ) 
         return attrs 
     
     def create( self , validated_data ) :
+
         user = User.objects.create( 
             username = validated_data['username'] , 
             email = validated_data['email'] ,
@@ -60,8 +100,16 @@ class ResetPasswordSerilaizer( serializers.Serializer ) :
 class ProfileSerializer( serializers.ModelSerializer ) : 
     borrowed_books_count =  serializers.IntegerField( read_only = True )
     overdue_books_count = serializers.IntegerField( read_only = True )
+    favorites_count = serializers.IntegerField( read_only = True )
     class Meta : 
         model = User 
-        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ,"overdue_books_count","date_joined" ] 
+        fields = [ "username" , "email" , "first_name" , "last_name" , "borrowed_books_count" ,"overdue_books_count","favorites_count","date_joined" ] 
         read_only_fields = ['date_joined'] 
-         
+
+class FavoriteBookSerializer ( serializers.ModelSerializer ) :
+    book = BookSerializers( read_only = True ) 
+
+    class Meta : 
+        model = Favorite_Book 
+        fields = ['id','book','created_at'] 
+                 

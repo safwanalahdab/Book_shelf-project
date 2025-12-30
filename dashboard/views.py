@@ -1,16 +1,25 @@
+from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 from django.shortcuts import render
-from rest_framework import viewsets, status 
+from django.utils import timezone
+
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
-from rest_framework.decorators import action
-from django.db.models import Q , Count 
-from books.models import Book , BorrowedBook , Category , Author 
-from books.serializers import BookSerializers , BarrowBookSerilaizers , AuthorSerializers , CategorySerializers
-from .serializers import UserAdminSeri 
-from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 
-# Create your views here.
+from books.models import Author, Book, BorrowedBook, Category
+from books.serializers import (
+    AuthorSerializers,
+    BarrowBookSerilaizers,
+    BookSerializers,
+    CategorySerializers,
+)
+from .serializers import UserAdminSeri
+
 
 User = get_user_model() 
 
@@ -20,7 +29,6 @@ class BookAdminView( viewsets.ModelViewSet ) :
     permission_classes = [IsAdminUser] # just admin 
 
     def get_queryset ( self ) :
-        #queryset = Book.objects.filter( is_archived = False )
         queryset = Book.objects.all().order_by("is_archived","-count_borrowed")
         author = self.request.query_params.get('author') 
         category = self.request.query_params.get('category') 
@@ -50,7 +58,35 @@ class BookAdminView( viewsets.ModelViewSet ) :
         book.is_archived = False 
         book.save() 
         return Response({"MESSAGE" : "تمت الغاء الارشفة بنجاح"} , status = status.HTTP_200_OK ) 
-        
+
+"""
+###BookAdminView
+
+### GET /dashboard/books/
+
+**Description**  
+Returns a list of all books (both archived and active) for administrative purposes. Results are ordered by archive status and popularity.
+
+**Permissions**  
+- `IsAdminUser` – only admin users can access this endpoint.
+
+**Ordering**  
+- First by `is_archived` (non-archived books first).
+- Then by `-count_borrowed` (most borrowed books first).
+
+**Query Parameters**
+- `author` *(optional, string)*  
+  Filters books by author name (case-insensitive, partial match).  
+  Example: `?author=Naguib`
+- `category` *(optional, string)*  
+  Filters books by category name (case-insensitive, partial match).  
+  Example: `?category=Novel`
+
+**Response (200 OK)**  
+Returns a list of `BookSerializers` objects.
+
+"""
+
 class UserAdminView( viewsets.ReadOnlyModelViewSet ) :
      serializer_class = UserAdminSeri 
      permission_classes = [IsAdminUser] 
@@ -61,6 +97,27 @@ class UserAdminView( viewsets.ReadOnlyModelViewSet ) :
              borrowed_books_count = Count('borrower_book' , filter = Q( borrower_book__is_returned = False ))
          )
      
+"""
+### UserAdminView
+### GET /admin/users/
+
+**Description**  
+Returns a read-only list of all users in the system, annotated with the number of books each 
+user is currently borrowing (i.e., not yet returned).
+
+**Permissions**  
+- `IsAdminUser` – only admin users are allowed to access this endpoint.
+
+**Behavior**  
+Each user object is annotated with:
+- `borrowed_books_count`: the number of `BorrowedBook` records linked to this user where `is_returned = False`.
+
+This is implemented using:
+- `annotate(borrowed_books_count=Count('borrower_book', filter=Q(borrower_book__is_returned=False)))`
+
+**Response (200 OK)**  
+Returns a list of `UserAdminSeri` objects. A typical response item may look like:
+"""
 
 class BorrowedBookAdminViewSet( viewsets.ModelViewSet ) :
     serializer_class = BarrowBookSerilaizers
@@ -81,24 +138,59 @@ class BorrowedBookAdminViewSet( viewsets.ModelViewSet ) :
         borrow.return_date = borrow.return_request_date 
         borrow.save() 
         return Response({"MESSAGE" : "تمت استعادة الكتاب بنجاح"} , status = status.HTTP_200_OK )
-    """
-    @action( detail = True , methods = ['post'] , permission_classes = [IsAdminUser] ) 
-    def reject_return( self , request , pk = None ) : 
-        borrow = self.get_object() 
-        if not borrow.return_request : 
-            return Response({"Erroe" : "المستخدم لم يقدم طلب استرجاع"} , status = status.HTTP_400_BAD_REQUEST )
-        return Response( {"MESSAGE" : "تم رفض طلب الاستعادة"} , status = status.HTTP_200_OK )
-    """
+"""
+### BorrowedBookAdminViewSet
+### GET /dashboard/borrowed-books/
+
+**Description**  
+Returns a list of all *active* borrowed-book records (i.e., borrowings that have not yet been marked as returned).
+
+**Permissions**  
+- `IsAdminUser` – only admin users can access this endpoint.
+
+**Behavior**  
+The queryset is restricted to:
+- `BorrowedBook.objects.filter(is_returned=False)`
+
+So only currently borrowed (open) records are included.
+
+**Response (200 OK)**  
+Returns a list of `BarrowBookSerilaizers` objects.
+
+"""
+
 class DashboardStatsView ( APIView ) :
     permission_classes = [IsAdminUser] 
 
     def get( self , request ) : 
         total_users = User.objects.count() 
         total_books = Book.objects.count() 
+        today = timezone.localdate()
+        start = today - timedelta(days = 6 )  
         borrowed_books = BorrowedBook.objects.filter( is_returned = False ).count()
         pending_returns = BorrowedBook.objects.filter( is_returned = False , return_request = True ).count()
         archived_books = Book.objects.filter( is_archived = True ).count() 
         available_books = Book.objects.filter( is_avaiable = True ).count() 
+        category_stats = (
+           Category.objects.annotate(
+               books_count = Count('category')
+           )
+           .values('id','name','books_count')
+        )
+        history = (
+            BorrowedBook.objects.filter( borrow_date__range = ( start , today ) ) 
+            .values("borrow_date") 
+            .annotate( count = Count("id")) 
+        )
+
+        counts_map = {row["borrow_date"]: row["count"] for row in history }
+        borrowed_last_7_days = [
+            {
+              "date": (start + timedelta(days=i)).strftime("%Y %m %d"),  
+              "count": counts_map.get(start + timedelta(days=i), 0),
+            }
+            for i in range(7)
+        ]
 
         data = {
              "total_users" : total_users , 
@@ -107,17 +199,69 @@ class DashboardStatsView ( APIView ) :
              "available_books" : available_books , 
              "pending_returns" : pending_returns , 
              "archived_books" : archived_books ,
+             'category_stats' : category_stats ,
+             'borrowed_last_7_days' : borrowed_last_7_days ,
             
         }
         return Response( data , status = status.HTTP_200_OK ) 
-    
+
+
+"""
+### DashboardStatsView
+### GET /dashboard/stats/
+
+**Description**  
+Provides a summary of key statistics for the admin dashboard, including counts of users, books, borrowing activity, category breakdown, and borrow history for the last 7 days.
+
+**Permissions**  
+- `IsAdminUser` – only admin users can access this endpoint.
+
+**Response (200 OK)**  
+
+"""
+
 class CategoryAdminView( viewsets.ModelViewSet ) : 
     queryset = Category.objects.all() 
     serializer_class = CategorySerializers 
     permission_classes = [IsAdminUser] 
 
+
+"""
+
+### CategoryAdminView
+### PUT /dashboard/categories/{id}/
+### PATCH /dashboard/categories/{id}/
+
+**Description**  
+Updates an existing category (full update with PUT, partial update with PATCH).
+
+**Permissions**  
+- `IsAdminUser`
+
+---
+
+### DELETE /dashboard/categories/{id}/
+
+**Description**  
+Deletes a category.
+
+**Permissions**  
+- `IsAdminUser`
+
+**Response (204 No Content)**  
+Category successfully deleted.
+
+"""
+
 class AuthorAdminView( viewsets.ModelViewSet ) : 
     queryset = Author.objects.all() 
     serializer_class = AuthorSerializers 
     permission_classes = [ IsAdminUser ] 
-       
+
+
+"""
+### AuthorAdminView
+
+Admin CRUD API for managing authors.
+
+"""

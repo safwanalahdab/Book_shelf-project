@@ -48,21 +48,12 @@ class BarrowBookSerilaizers ( serializers.ModelSerializer ) :
      book = BookSerializers( read_only = True ) 
      borrower = serializers.StringRelatedField( read_only = True )
 
-     #due_date = serializers.SerializerMethodField()
-     #late_day = serializers.SerializerMethodField()
+     late_day = serializers.SerializerMethodField()
 
      class Meta : 
          model = BorrowedBook 
          fields = ['id','book','borrower','borrow_date','return_request','return_date','is_returned','notes','due_date','late_day','return_request_date']
     
-"""
-     def get_due_date(self, obj):
-        return obj.due_date
-        
-        Called by DRF when serializing the 'due_date' field.
-
-        It simply returns the value of the model property 'due_date'.
-
      def get_late_day(self, obj):
         return obj.late_day 
-"""
+

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User 
 from django.utils import timezone
 from datetime import timedelta
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 
@@ -34,7 +35,26 @@ class Book ( models.Model ) :
     pages = models.IntegerField( default = 0 )
     publication_year = models.IntegerField( null = True  ) 
     isbn = models.CharField( null = True , max_length = 15 ) 
-        
+
+    def save(self, *args, **kwargs):
+    # إذا الكتاب جديد (ما له PK لسا)
+     if self.pk is None:
+        self.available_copies = self.total_copies 
+        return super().save(*args, **kwargs)
+    
+     old = Book.objects.only("total_copies","available_copies").get( pk = self.pk ) 
+     old_total = old.total_copies 
+     old_available_copies = old.available_copies 
+     
+     borrowed_now  = max( (old_total - old_available_copies) , 0 )  
+
+     if self.total_copies < borrowed_now : 
+        raise ValidationError("لا يمكنك التعديل لانه عدد النسخ المستعارة حاليا اكبر من عدد النسخ الكلي")
+     
+     self.available_copies = self.total_copies - borrowed_now
+     self.is_avaiable = self.available_copies > 0 
+
+     return super().save(*args, **kwargs)    
     """
     this function to boorow 
     """
@@ -69,7 +89,7 @@ class BorrowedBook ( models.Model ) :
      return_request = models.BooleanField( default = False ) 
      return_request_date =  models.DateField( blank = True , null = True )
      due_date = models.DateField( null = True , blank = True ) 
-     late_day = models.IntegerField( default = 0 ) 
+    # late_day = models.IntegerField( default = 0 ) 
      def __str__( self ) : 
          return self.book.title 
      
@@ -79,30 +99,31 @@ class BorrowedBook ( models.Model ) :
             self.borrow_date = timezone.now().date()
         if not self.due_date :
             self.due_date = self.borrow_date + timedelta( days = 10 )   
-
-        today = timezone.now().date()
-        if today > self.due_date:
-            self.late_days = (today - self.due_date).days
-        else:
-            self.late_days = 0
-        
-        self.save( update_fields = [ 'due_date' , 'late_days' ] ) 
         super().save(*args, **kwargs) 
-
-     """    
-     @property 
-     def due_date( self ) : 
-          return self.borrow_date + timedelta( days = 2 )
-     #Returns the expected return date for this borrowed book.
-
+        
      @property
      def late_day( self ) : 
-       date = self.borrow_date + timedelta( days = 2 ) 
+       date = self.borrow_date + timedelta( days = 10 ) 
        today = timezone.now().date()
        if today <= date : 
           return 0 
        else : 
           return ( ( today - date ).days ) 
+       
     #Returns the number of days this borrowing is late.
-    """ 
      
+class Favorite_Book( models.Model ) : 
+   user =  models.ForeignKey( User , on_delete = models.CASCADE , related_name = "user_fav" ) 
+   book = models.ForeignKey( Book , on_delete = models.CASCADE , related_name = "book_fav" ) 
+   created_at = models.DateTimeField( auto_now_add = True ) 
+   class Meta : 
+      constraints = [
+         models.UniqueConstraint( fields = ["user" , "book"] , name = "unique_favorite_user_book" ) 
+      ]
+    
+   def __str__ ( self ) : 
+      return self.book.title
+
+
+
+

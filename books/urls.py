@@ -1,15 +1,15 @@
 from django.urls import path , include 
+from rest_framework.routers import DefaultRouter 
 from .views import * 
 from . import views
-from .views import * 
-from rest_framework.routers import DefaultRouter 
 
 
 router = DefaultRouter() 
-router.register('', BookViewSet , basename = 'books' ) 
+router.register('books', BookViewSet , basename = 'books' ) 
+router.register('category', CategoryViewSet , basename = 'category' ) 
+
 
 urlpatterns = [
-       path('', views.book_page, name='book_page') ,
        path('api/', include( router.urls ) ) ,
 ]
 
