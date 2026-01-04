@@ -37,10 +37,15 @@ class Book ( models.Model ) :
     isbn = models.CharField( null = True , max_length = 15 ) 
 
     def save(self, *args, **kwargs):
+     
+     skip_recalc = kwargs.pop("skip_recalc", False)
     # إذا الكتاب جديد (ما له PK لسا)
      if self.pk is None:
         self.available_copies = self.total_copies 
         return super().save(*args, **kwargs)
+     
+     if skip_recalc:
+       return super().save(*args, **kwargs)
     
      old = Book.objects.only("total_copies","available_copies").get( pk = self.pk ) 
      old_total = old.total_copies 
@@ -64,7 +69,8 @@ class Book ( models.Model ) :
         self.available_copies -= 1 
         self.is_avaiable = self.available_copies > 0 
         self.count_borrowed += 1 
-        self.save( update_fields = [ 'available_copies' , 'is_avaiable' , 'count_borrowed'] )
+        self.save(skip_recalc=True, update_fields=['available_copies', 'is_avaiable', 'count_borrowed'])
+
         return True 
     
     """
@@ -74,7 +80,7 @@ class Book ( models.Model ) :
     def return_copy( self ) :
         self.available_copies += 1 
         self.is_avaiable = True 
-        self.save( update_fields = [ 'available_copies' , 'is_avaiable' ] ) 
+        self.save(skip_recalc=True, update_fields=['available_copies', 'is_avaiable']) 
 
     def __str__( self ) : 
         return self.title 
